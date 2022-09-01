@@ -1,0 +1,91 @@
+version: "2.2"
+
+services:
+  head:
+    build:
+      context: .
+      dockerfile: sge/Dockerfile.sge
+    image: ge:8.1.9-5  
+    command: ["head-node"]
+    container_name: head 
+    hostname: head.sge_default
+    privileged: true 
+    volumes:
+      - opt_sge:/opt/sge
+      - home_rstudio:/home/rstudio
+      - home_sgeadmin:/home/sgeadmin
+    expose:
+      - "6444"
+      - "6445"
+
+  c1:
+    image: ge:8.1.9-5
+    command: ["compute-node"]
+    hostname: c1.sge_default
+    container_name: c1
+    privileged: true 
+    volumes:
+      - opt_sge:/opt/sge 
+      - home_rstudio:/home/rstudio
+      - home_sgeadmin:/home/sgeadmin
+      - opt_r:/opt/R
+      - etc_rstudio:/etc/rstudio
+      - usr_lib_rstudio:/usr/lib/rstudio-server
+      - shared_storage:/opt/rstudio/shared
+    expose:
+      - "6444"
+    depends_on:
+      - "head"
+
+  c2:
+    image: ge:8.1.9-5 
+    command: ["compute-node"]
+    hostname: c2.sge_default
+    container_name: c2
+    privileged: true
+    volumes:
+      - opt_sge:/opt/sge
+      - home_rstudio:/home/rstudio
+      - home_sgeadmin:/home/sgeadmin
+      - opt_r:/opt/R
+      - etc_rstudio:/etc/rstudio
+      - usr_lib_rstudio:/usr/lib/rstudio-server
+      - shared_storage:/opt/rstudio/shared
+    expose:
+      - "6444"
+    depends_on:
+      - "head"
+
+  rsw:
+    build:
+      context: . 
+      dockerfile: rsw/Dockerfile.rsw
+    image: rsw:2022.07.1-554.pro3.ge
+    command: ["rsw"]
+    hostname: rsw.sge_default
+    container_name: rsw
+    privileged: true
+    environment:
+      RSW_LICENSE: ${RSW_LICENSE}
+    volumes:
+      - opt_sge:/opt/sge
+      - home_rstudio:/home/rstudio
+      - home_sgeadmin:/home/sgeadmin
+      - opt_r:/opt/R
+      - etc_rstudio:/etc/rstudio
+      - usr_lib_rstudio:/usr/lib/rstudio-server
+      - shared_storage:/opt/rstudio/shared
+    ports:
+      - "8789:8787"
+    depends_on:
+      - "head"
+
+
+volumes:
+  opt_sge:
+  home_sgeadmin:
+  home_rstudio:
+  opt_r:
+  etc_rstudio:
+  usr_lib_rstudio:
+  shared_storage:

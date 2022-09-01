@@ -1,0 +1,42 @@
+FROM centos:7
+
+RUN yum install epel-release -y 
+
+RUN curl  https://copr.fedorainfracloud.org/coprs/loveshack/SGE/repo/epel-7/loveshack-SGE-epel-7.repo > /etc/yum.repos.d/loveshack-SGE-epel-7.repo
+
+RUN yum install gridengine-devel gridengine-qmon gridengine-execd gridengine-qmaster -y
+
+
+# Install a couple of tools 
+RUN yum install -y openssh-clients openssh-server initscripts openssh-server-sysvinit sudo 
+RUN yum install -y numactl-libs 
+
+
+# Add admin user account
+RUN userdel sgeadmin 
+RUN groupadd -g 6200 sgeadmin && useradd -s /bin/bash -u 6200 -g 6200 sgeadmin -m && \ 
+        chown -R sgeadmin /opt/sge
+RUN sudo -u sgeadmin bash -l -c "ssh-keygen -t dsa -N '' -f /home/sgeadmin/.ssh/id_dsa && cat /home/sgeadmin/.ssh/id_dsa.pub >> /home/sgeadmin/.ssh/authorized_keys && chmod 0600 /home/sgeadmin/.ssh/authorized_keys"
+
+# Add rstudio user account
+RUN groupadd -g 2000 rstudio && useradd -u 2000 rstudio -g rstudio
+RUN echo "rstudio:rstudio" | chpasswd
+
+
+# Copy installation template into container  
+COPY sge/inst.conf /opt/sge/
+
+# Ensure AGE binaries are in users' PATH
+RUN echo ". /opt/sge/default/common/settings.sh" >> /etc/bashrc
+
+# rpm -q --requires rstudio-server | uniq   
+RUN yum install -y rrdtool sqlite postgresql-libs psmisc
+
+# rpm -q --requires R-4.2.1 | uniq
+RUN yum install -y bzip2-devel gcc gcc-c++ gcc-gfortran libcurl-devel libicu-devel libSM libtiff libXmu libXt make openblas-devel pango pcre2-devel tcl tk unzip which xz-devel zip zlib-devel
+
+COPY docker-start.sh /usr/local/bin/docker-start.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-start.sh"]
+
+CMD ["head-node"]
